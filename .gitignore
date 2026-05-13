@@ -1,0 +1,78 @@
+### Gradle ###
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+
+### Local Gradle home (CI/sandbox override) ###
+.gradle-user-home/
+
+### JVM crash / heap ###
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
+
+### Logs & temp ###
+*.log
+*.tmp
+*.temp
+*.swp
+*~
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Local / secrets / machine-only (do not commit) ###
+.env
+.env.*
+.env.local
+
+# Spring: 로컬 프로필·URL·비번 오버라이드
+application-local.properties
+application-local.yml
+application-local.yaml
+**/application-local.*
+**/application-*-local.*
+**/application-postgres.properties
+application-secrets.properties
+**/application-secrets.*
+secrets.properties
+
+# 키·인증서
+*.p12
+*.jks
+*.pem
+
+# REST Client (VS Code / IntelliJ) 비공개 env
+http-client.private.env.json
+**/http-client.private.env.json
+
+### Eclipse / STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
