@@ -62,7 +62,7 @@ Spring Boot **게시판 REST API**다. 게시판(Board)·게시글(Post)·댓글
 - `JwtAuthenticationFilter` 가 토큰을 검증하고 `SecurityContext` 를 채운다.
 - **규칙 순서 (`SecurityConfig`):** 위에서 아래로 먼저 매칭된다.
   1. `GET /health` → 허용.
-  2. `RestrictedBoardReadRequestMatcher` 에 걸리는 **GET** → 인증 필요(유효 JWT). 대상 게시판이 `**isPrivate`** 이거나 `**isActive == false**` 이면 익명 요청은 거부된다.
+  2. `RestrictedBoardReadRequestMatcher` 에 걸리는 **GET** → **비공개** 보드만 `USER` 역할 검사(아래 표). **비활성** 보드는 서비스에서 **404**(목록에도 없음).
   3. `GET /boards/**`, `GET /posts/**`, `GET /comments/**` → 매처 다음 규칙상 허용이지만, **2번이 먼저** 적용된다.
   4. 나머지 → 인증 필요(`POST` / `PUT` / `DELETE` 등).
 
@@ -72,10 +72,13 @@ Spring Boot **게시판 REST API**다. 게시판(Board)·게시글(Post)·댓글
 | 게시판 상태                                     | 해당 게시판으로 이어지는 **조회용 GET** (예: `/boards/{segment}`, 글·댓글 조회) |
 | ------------------------------------------ | ----------------------------------------------------------- |
 | `isPrivate == false` 이고 `isActive == true` | JWT 없이(익명) 허용                                               |
-| `isPrivate == true` 또는 `isActive == false` | 유효한 JWT 가 있는 요청만 허용                                         |
+| `isPrivate == true`                        | JWT에 `USER`(정식 회원) 역할 필요. 미충족 시 **403** + `{"message":"정식 회원만 열람할 수 있습니다."}` |
+| `isActive == false` | **404** (존재하지 않는 것과 동일, `GET /boards` 목록에도 없음) |
 
 
-보드별 멤버십은 검사하지 않는다. `GET /boards` 목록은 매처 밖이라, 구현상 비공개 게시판 메타가 목록에 나올 수 있다.
+역할 이름은 JWT `roles` 배열·DB `user_roles` 와 동일(`TEMP_USER`, `USER` 등, `ROLE_` 접두사 없음). 신규 가입은 auth 서비스에서 `TEMP_USER` 만 부여한다.
+
+`GET /boards` 목록은 매처 밖이라, 구현상 비공개 게시판 메타가 목록에 나올 수 있다.
 
 **토큰 검증 시점에 쓰는 클레임(다른 서비스에서 맞출 때):** HS256, `sub` 는 **숫자 문자열**(사용자 ID), `roles` 문자열 배열(클레임에는 `ROLE_` 접두사 없이, 필터에서 스프링 규약에 맞게 붙임), 선택 `exp` 등.
 
@@ -90,7 +93,7 @@ Spring Boot **게시판 REST API**다. 게시판(Board)·게시글(Post)·댓글
 
 ### 엔드포인트
 
-표의 **매처** 는 `RestrictedBoardReadRequestMatcher` 를 뜻한다(비공개·비활성 보드면 JWT 필요).
+표의 **매처** 는 `RestrictedBoardReadRequestMatcher` 를 뜻한다(비공개 보드·`USER` 역할만).
 
 
 | 메서드    | 경로                           | 인증  | 비고                               |

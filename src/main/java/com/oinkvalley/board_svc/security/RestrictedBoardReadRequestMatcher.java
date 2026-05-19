@@ -13,17 +13,25 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 대상 게시판을 익명으로 읽을 수 없는 GET 요청과 일치합니다.
- * ({@link Board#isPrivate()} 이거나 비활성 게시판인 경우). 이런 요청은 {@code authenticated()} 가 필요합니다.
+ * 대상 게시판을 제한적으로만 읽을 수 있는 GET 요청과 일치합니다.
+ * <ul>
+ *   <li>{@link RestrictedReadLevel#USER} — {@link Board#isPrivate()} 비공개 게시판({@code USER} 역할만)</li>
+ * </ul>
  * 게시판은 중첩 경로 {@code /boards/{segment}}, {@code /boards/{segment}/write},
  * {@code /boards/{segment}/{postId}}, 또는 댓글 API에서 식별합니다. (글 단건 {@code GET /posts/{id}} 는 없음.)
  */
 @RequiredArgsConstructor
 public class RestrictedBoardReadRequestMatcher implements RequestMatcher {
 
+    public enum RestrictedReadLevel {
+        /** 비공개 게시판 — {@code USER} 역할 필요 */
+        USER
+    }
+
     private final BoardRepository boardRepository;
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
+    private final RestrictedReadLevel level;
 
     private static final Pattern BOARDS_POST = Pattern.compile("^/boards/([^/]+)/(\\d+)/?$");
     private static final Pattern BOARDS_WRITE = Pattern.compile("^/boards/([^/]+)/write/?$");
@@ -44,12 +52,12 @@ public class RestrictedBoardReadRequestMatcher implements RequestMatcher {
             return false;
         }
         return boardRepository.findById(boardId.get())
-                .map(this::requiresAuthenticationForRead)
+                .map(this::matchesLevel)
                 .orElse(false);
     }
 
-    private boolean requiresAuthenticationForRead(Board board) {
-        return board.isPrivate() || !board.isActive();
+    private boolean matchesLevel(Board board) {
+        return level == RestrictedReadLevel.USER && board.isPrivate();
     }
 
     private Optional<Long> resolveBoardId(String path, HttpServletRequest request) {

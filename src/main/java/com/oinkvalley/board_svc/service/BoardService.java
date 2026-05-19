@@ -54,10 +54,20 @@ public class BoardService {
                 .orElseThrow(() -> new IllegalArgumentException("Board not found: " + boardId));
     }
 
-    /**
-     * URL 첫 세그먼트: 숫자만이면 기본키, 아니면 슬러그로 해석합니다.
-     */
+    /** 비활성 보드는 공개 조회 API에서 존재하지 않는 것과 동일하게 404. */
+    private void ensureActiveForPublicRead(Board board) {
+        if (!board.isActive()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Board not found");
+        }
+    }
+
     public Board resolveBoardForPublicRead(String segment) {
+        Board board = resolveBoardUnchecked(segment);
+        ensureActiveForPublicRead(board);
+        return board;
+    }
+
+    private Board resolveBoardUnchecked(String segment) {
         if (segment == null || segment.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "board segment must not be blank");
         }

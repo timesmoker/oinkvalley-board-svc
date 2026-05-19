@@ -58,16 +58,26 @@ public class CommentService {
 
     @Transactional
     public CommentResponse get(Long commentId) {
-        return commentRepository.findById(commentId)
-                .map(this::toResponse)
-                .orElseThrow(() -> new IllegalArgumentException("Comment not found: " + commentId));
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found: " + commentId));
+        ensurePostBoardActiveForPublicRead(comment.getPost());
+        return toResponse(comment);
     }
 
     @Transactional
     public Page<CommentResponse> getByPost(Long postId, Pageable pageable) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found: " + postId));
+        ensurePostBoardActiveForPublicRead(post);
         Pageable sorted = PageableSortDefaults.createdAtDescIfUnsorted(pageable);
         return commentRepository.findByPost_Id(postId, sorted)
                 .map(this::toResponse);
+    }
+
+    private void ensurePostBoardActiveForPublicRead(Post post) {
+        if (!post.getBoard().isActive()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found: " + post.getId());
+        }
     }
 
     private CommentResponse toResponse(Comment comment) {
