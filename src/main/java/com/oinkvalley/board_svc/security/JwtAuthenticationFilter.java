@@ -27,6 +27,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtUtil jwtUtil;
+    private final SecurityJsonHandlers securityJsonHandlers;
 
     @Override
     protected void doFilterInternal(
@@ -56,7 +57,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(auth);
         } catch (Exception e) {
             SecurityContextHolder.clearContext();
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token");
+            securityJsonHandlers.writeInvalidToken(response);
             return;
         }
         filterChain.doFilter(request, response);

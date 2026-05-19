@@ -5,6 +5,8 @@ import com.oinkvalley.board_svc.db.repository.CommentRepository;
 import com.oinkvalley.board_svc.db.repository.PostRepository;
 import com.oinkvalley.board_svc.security.JwtAuthenticationFilter;
 import com.oinkvalley.board_svc.security.RestrictedBoardReadRequestMatcher;
+import com.oinkvalley.board_svc.security.RestrictedBoardReadRequestMatcher.RestrictedReadLevel;
+import com.oinkvalley.board_svc.security.SecurityJsonHandlers;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,21 +26,28 @@ import org.springframework.security.web.access.intercept.AuthorizationFilter;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final SecurityJsonHandlers securityJsonHandlers;
     private final BoardRepository boardRepository;
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        var restrictedBoardReads = new RestrictedBoardReadRequestMatcher(
-                boardRepository, postRepository, commentRepository);
+        var privateBoardReads = new RestrictedBoardReadRequestMatcher(
+                boardRepository, postRepository, commentRepository, RestrictedReadLevel.USER);
         // JWT 상태 없음 구성: CSRF 비활성, 세션 미생성
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) ->
+                                securityJsonHandlers.writeUnauthorized(response))
+                        .accessDeniedHandler((request, response, accessDeniedException) ->
+                                securityJsonHandlers.writeForbidden(response))
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/health").permitAll()
-                        .requestMatchers(restrictedBoardReads).authenticated()
+                        .requestMatchers(privateBoardReads).hasRole("USER")
                         .requestMatchers(HttpMethod.GET, "/boards/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/posts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/comments/**").permitAll()
