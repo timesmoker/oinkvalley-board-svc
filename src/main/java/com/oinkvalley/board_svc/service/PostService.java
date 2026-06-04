@@ -5,9 +5,13 @@ import com.oinkvalley.board_svc.db.domain.Post;
 import com.oinkvalley.board_svc.dto.board.PostCreateRequest;
 import com.oinkvalley.board_svc.dto.board.PostResponse;
 import com.oinkvalley.board_svc.dto.board.PostUpdateRequest;
+import com.oinkvalley.board_svc.dto.internal.InternalPostCreateRequest;
+import com.oinkvalley.board_svc.dto.internal.InternalPostCreateResponse;
 import com.oinkvalley.board_svc.db.repository.BoardRepository;
 import com.oinkvalley.board_svc.db.repository.PostRepository;
 import jakarta.transaction.Transactional;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -32,6 +36,38 @@ public class PostService {
                 .content(request.content())
                 .build();
         return toResponse(postRepository.save(post));
+    }
+
+    /** {@code POST /internal/posts} — 작성자 ID 는 요청 본문의 {@code authorUserId}. */
+    public InternalPostCreateResponse createInternal(InternalPostCreateRequest request) {
+        Board board = boardRepository.findById(request.boardId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Board not found: " + request.boardId()));
+        if (!board.isActive()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Board not found");
+        }
+        Post post = Post.builder()
+                .userId(request.authorUserId())
+                .board(board)
+                .title(request.title())
+                .content(PostContentFactory.fromPlainText(
+                        request.text(), request.sourceUrl(), bubblePalMetadata(request)))
+                .build();
+        return new InternalPostCreateResponse(postRepository.save(post).getId());
+    }
+
+    private static Map<String, Object> bubblePalMetadata(InternalPostCreateRequest request) {
+        if (request.metadata() == null || request.metadata().isEmpty()) {
+            return null;
+        }
+        Map<String, Object> meta = new LinkedHashMap<>(request.metadata());
+        if (request.characterId() != null && !request.characterId().isBlank()) {
+            meta.putIfAbsent("characterId", request.characterId().trim());
+        }
+        if (request.authorType() != null && !request.authorType().isBlank()) {
+            meta.putIfAbsent("authorType", request.authorType().trim());
+        }
+        return meta;
     }
 
     @Transactional
