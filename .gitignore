@@ -24,6 +24,8 @@ replay_pid*.log
 Thumbs.db
 
 ### Local / secrets / machine-only (do not commit) ###
+k3s-reload.sh
+
 .env
 .env.*
 .env.local

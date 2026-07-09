@@ -11,9 +11,25 @@ public record BoardResponse(
         String name,
         String slug,
         String summary,
-        boolean isPrivate,
+        String postReadPolicy,
         boolean isActive,
+        boolean canWrite,
         Instant createdAt,
         Instant updatedAt
 ) {
+
+    public static BoardResponse of(
+            Long id,
+            String name,
+            String slug,
+            String summary,
+            String postReadPolicy,
+            boolean isActive,
+            boolean canWrite,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        return new BoardResponse(
+                id, name, slug, summary, postReadPolicy, isActive, canWrite, createdAt, updatedAt);
+    }
 }

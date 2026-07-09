@@ -42,9 +42,10 @@ public class Board {
     private String summary;
 
     @NotNull
-    @Column(name = "is_private", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "post_read_policy", nullable = false, length = 32)
     @Builder.Default
-    private boolean isPrivate = false;
+    private BoardPostReadPolicy postReadPolicy = BoardPostReadPolicy.ROLE_READERS;
 
     @NotNull
     @Column(name = "is_active", nullable = false)
@@ -72,11 +73,11 @@ public class Board {
         this.updatedAt = Instant.now();
     }
 
-    public void update(String name, String slug, String summary, boolean isPrivate, boolean isActive) {
+    public void update(String name, String slug, String summary, BoardPostReadPolicy postReadPolicy, boolean isActive) {
         this.name = name;
         this.slug = slug;
         this.summary = summary;
-        this.isPrivate = isPrivate;
+        this.postReadPolicy = postReadPolicy;
         this.isActive = isActive;
     }
 }

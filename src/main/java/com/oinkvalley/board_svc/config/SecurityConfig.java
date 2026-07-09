@@ -1,11 +1,6 @@
 package com.oinkvalley.board_svc.config;
 
-import com.oinkvalley.board_svc.db.repository.BoardRepository;
-import com.oinkvalley.board_svc.db.repository.CommentRepository;
-import com.oinkvalley.board_svc.db.repository.PostRepository;
 import com.oinkvalley.board_svc.security.JwtAuthenticationFilter;
-import com.oinkvalley.board_svc.security.RestrictedBoardReadRequestMatcher;
-import com.oinkvalley.board_svc.security.RestrictedBoardReadRequestMatcher.RestrictedReadLevel;
 import com.oinkvalley.board_svc.security.SecurityJsonHandlers;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -18,8 +13,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 
 /**
- * 스프링 시큐리티 필터 체인. 규칙은 위에서 아래로 먼저 매칭되므로
- * {@link RestrictedBoardReadRequestMatcher} 를 일반 {@code GET} 허용보다 앞에 둡니다.
+ * 스프링 시큐리티 필터 체인. 읽기 경로는 여기서 열어두고,
+ * 게시판별 접근 판정은 서비스 계층의 {@code BoardPermissionService} 가 담당합니다.
  */
 @Configuration
 @RequiredArgsConstructor
@@ -27,14 +22,9 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final SecurityJsonHandlers securityJsonHandlers;
-    private final BoardRepository boardRepository;
-    private final PostRepository postRepository;
-    private final CommentRepository commentRepository;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        var privateBoardReads = new RestrictedBoardReadRequestMatcher(
-                boardRepository, postRepository, commentRepository, RestrictedReadLevel.USER);
         // JWT 상태 없음 구성: CSRF 비활성, 세션 미생성
         return http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -48,7 +38,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/health").permitAll()
                         .requestMatchers("/internal/**").permitAll()
-                        .requestMatchers(privateBoardReads).hasRole("USER")
                         .requestMatchers(HttpMethod.GET, "/boards/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/posts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/comments/**").permitAll()

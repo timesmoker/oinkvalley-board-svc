@@ -2,6 +2,7 @@ package com.oinkvalley.board_svc.controller;
 
 import com.oinkvalley.board_svc.db.domain.Board;
 import com.oinkvalley.board_svc.dto.board.BoardCreateRequest;
+import com.oinkvalley.board_svc.dto.board.BoardListItemResponse;
 import com.oinkvalley.board_svc.dto.board.BoardPostsBundleResponse;
 import com.oinkvalley.board_svc.dto.board.BoardResponse;
 import com.oinkvalley.board_svc.dto.board.BoardUpdateRequest;
@@ -35,14 +36,14 @@ public class BoardController {
     }
 
     @GetMapping
-    public ResponseEntity<List<BoardResponse>> getActiveBoards() {
+    public ResponseEntity<List<BoardListItemResponse>> getActiveBoards() {
         return ResponseEntity.ok(boardService.getActiveBoards());
     }
 
     /** 글쓰기 화면(서버 컴포넌트용) 게시판 메타만. 실제 글 생성은 {@code POST /posts}. */
     @GetMapping("/{segment}/write")
     public ResponseEntity<BoardResponse> getBoardForWrite(@PathVariable String segment) {
-        return ResponseEntity.ok(boardService.getBoardMetaForRead(segment));
+        return ResponseEntity.ok(boardService.getBoardMetaForWrite(segment));
     }
 
     @GetMapping("/{segment}/{postId:\\d+}")
@@ -51,7 +52,7 @@ public class BoardController {
             @PathVariable Long postId
     ) {
         Board board = boardService.resolveBoardForPublicRead(segment);
-        return ResponseEntity.ok(postService.getInBoard(postId, board.getId()));
+        return ResponseEntity.ok(postService.getInBoard(postId, board));
     }
 
     /** 게시판 메타와 글 요약 목록(게시판 홈). 세그먼트가 숫자만이면 기본키, 아니면 슬러그로 해석합니다. */
