@@ -25,8 +25,10 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final BoardRepository boardRepository;
+    private final ProseMirrorContentValidator contentValidator;
 
     public PostResponse create(Long userId, PostCreateRequest request) {
+        contentValidator.validate(request.content());
         Board board = boardRepository.findById(request.boardId())
                 .orElseThrow(() -> new IllegalArgumentException("Board not found: " + request.boardId()));
         Post post = Post.builder()
@@ -46,12 +48,14 @@ public class PostService {
         if (!board.isActive()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Board not found");
         }
+        Map<String, Object> content = PostContentFactory.fromPlainText(
+                request.text(), request.sourceUrl(), bubblePalMetadata(request));
+        contentValidator.validate(content);
         Post post = Post.builder()
                 .userId(request.authorUserId())
                 .board(board)
                 .title(request.title())
-                .content(PostContentFactory.fromPlainText(
-                        request.text(), request.sourceUrl(), bubblePalMetadata(request)))
+                .content(content)
                 .build();
         return new InternalPostCreateResponse(postRepository.save(post).getId());
     }
@@ -72,6 +76,7 @@ public class PostService {
 
     @Transactional
     public PostResponse update(Long postId, Long userId, PostUpdateRequest request) {
+        contentValidator.validate(request.content());
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found: " + postId));
         if (!post.getUserId().equals(userId)) {

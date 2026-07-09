@@ -23,8 +23,10 @@ public class CommentService {
 
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
+    private final ProseMirrorContentValidator contentValidator;
 
     public CommentResponse create(Long postId, Long userId, CommentCreateRequest request) {
+        contentValidator.validate(request.content());
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("Post not found: " + postId));
         Comment comment = Comment.builder()
@@ -37,6 +39,7 @@ public class CommentService {
 
     @Transactional
     public CommentResponse update(Long commentId, Long userId, CommentUpdateRequest request) {
+        contentValidator.validate(request.content());
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found: " + commentId));
         if (!comment.getUserId().equals(userId)) {

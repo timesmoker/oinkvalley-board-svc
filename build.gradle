@@ -17,6 +17,10 @@ repositories {
 	mavenCentral()
 }
 
+processResources {
+	from('content-schema.json')
+}
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-web'

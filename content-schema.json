@@ -1,0 +1,41 @@
+{
+  "$comment": "Board post/comment ProseMirror JSON contract (SOT). Editor extensions: frontend/src/features/boards/components/useExtensions.ts",
+  "rootType": "doc",
+  "maxNodes": 10000,
+  "maxDepth": 64,
+  "nodes": {
+    "doc": "container",
+    "paragraph": "container",
+    "heading": "container",
+    "blockquote": "container",
+    "bulletList": "container",
+    "orderedList": "container",
+    "listItem": "container",
+    "codeBlock": "container",
+    "table": "container",
+    "tableRow": "container",
+    "tableHeader": "container",
+    "tableCell": "container",
+    "taskList": "container",
+    "taskItem": "container",
+    "details": "container",
+    "detailsSummary": "container",
+    "detailsContent": "container",
+    "text": "text",
+    "horizontalRule": "leaf",
+    "hardBreak": "leaf",
+    "image": "leaf"
+  },
+  "marks": [
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    "code",
+    "link",
+    "subscript",
+    "superscript",
+    "textStyle",
+    "highlight"
+  ]
+}
