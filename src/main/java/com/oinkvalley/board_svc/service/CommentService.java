@@ -7,6 +7,7 @@ import com.oinkvalley.board_svc.dto.board.CommentResponse;
 import com.oinkvalley.board_svc.dto.board.CommentUpdateRequest;
 import com.oinkvalley.board_svc.db.repository.CommentRepository;
 import com.oinkvalley.board_svc.db.repository.PostRepository;
+import com.oinkvalley.board_svc.security.BoardActor;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,11 +25,16 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final ProseMirrorContentValidator contentValidator;
+    private final BoardPermissionService boardPermissionService;
 
     public CommentResponse create(Long postId, Long userId, CommentCreateRequest request) {
         contentValidator.validate(request.content());
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("Post not found: " + postId));
+        ensurePostBoardActiveForPublicRead(post);
+        BoardActor actor = BoardActor.current();
+        boardPermissionService.requireComment(actor, post.getBoard());
+        boardPermissionService.requirePostRead(actor, post.getBoard(), post.getUserId());
         Comment comment = Comment.builder()
                 .post(post)
                 .userId(userId)
@@ -64,6 +70,7 @@ public class CommentService {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found: " + commentId));
         ensurePostBoardActiveForPublicRead(comment.getPost());
+        requirePostReadable(comment.getPost());
         return toResponse(comment);
     }
 
@@ -72,6 +79,7 @@ public class CommentService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found: " + postId));
         ensurePostBoardActiveForPublicRead(post);
+        requirePostReadable(post);
         Pageable sorted = PageableSortDefaults.createdAtDescIfUnsorted(pageable);
         return commentRepository.findByPost_Id(postId, sorted)
                 .map(this::toResponse);
@@ -81,6 +89,11 @@ public class CommentService {
         if (!post.getBoard().isActive()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found: " + post.getId());
         }
+    }
+
+    /** 댓글은 글을 읽을 수 있는 주체만 조회 가능. */
+    private void requirePostReadable(Post post) {
+        boardPermissionService.requirePostRead(BoardActor.current(), post.getBoard(), post.getUserId());
     }
 
     private CommentResponse toResponse(Comment comment) {

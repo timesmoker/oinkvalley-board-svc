@@ -9,6 +9,7 @@ import com.oinkvalley.board_svc.dto.internal.InternalPostCreateRequest;
 import com.oinkvalley.board_svc.dto.internal.InternalPostCreateResponse;
 import com.oinkvalley.board_svc.db.repository.BoardRepository;
 import com.oinkvalley.board_svc.db.repository.PostRepository;
+import com.oinkvalley.board_svc.security.BoardActor;
 import jakarta.transaction.Transactional;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -26,11 +27,13 @@ public class PostService {
     private final PostRepository postRepository;
     private final BoardRepository boardRepository;
     private final ProseMirrorContentValidator contentValidator;
+    private final BoardPermissionService boardPermissionService;
 
     public PostResponse create(Long userId, PostCreateRequest request) {
         contentValidator.validate(request.content());
         Board board = boardRepository.findById(request.boardId())
                 .orElseThrow(() -> new IllegalArgumentException("Board not found: " + request.boardId()));
+        boardPermissionService.requireWrite(BoardActor.current(), board);
         Post post = Post.builder()
                 .userId(userId)
                 .board(board)
@@ -98,11 +101,13 @@ public class PostService {
 
     /**
      * {@code GET /boards/{segment}/{postId}} — 글이 해당 게시판에 속할 때만 200.
+     * 게시판 read 권한 + post_read_policy 통과 필요.
      */
     @Transactional
-    public PostResponse getInBoard(Long postId, Long boardId) {
-        Post post = postRepository.findByIdAndBoard_Id(postId, boardId)
+    public PostResponse getInBoard(Long postId, Board board) {
+        Post post = postRepository.findByIdAndBoard_Id(postId, board.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found in board: " + postId));
+        boardPermissionService.requirePostRead(BoardActor.current(), board, post.getUserId());
         return toResponse(post);
     }
 

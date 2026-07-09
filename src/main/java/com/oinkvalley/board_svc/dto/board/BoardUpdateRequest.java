@@ -11,7 +11,7 @@ public record BoardUpdateRequest(
         @NotBlank @Size(max = 100) String name,
         @NotBlank @Size(max = 64) String slug,
         @Size(max = 500) String summary,
-        @NotNull Boolean isPrivate,
+        @Size(max = 32) String postReadPolicy,
         @NotNull Boolean isActive
 ) {
 }

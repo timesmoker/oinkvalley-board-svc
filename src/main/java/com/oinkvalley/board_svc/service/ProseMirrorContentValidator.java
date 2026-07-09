@@ -21,8 +21,8 @@ public class ProseMirrorContentValidator {
 
     private final BoardContentSchema schema;
 
-    public ProseMirrorContentValidator(ObjectMapper objectMapper) {
-        this.schema = loadSchema(objectMapper);
+    public ProseMirrorContentValidator() {
+        this.schema = loadSchema(new ObjectMapper());
     }
 
     public void validate(Map<String, Object> content) {
