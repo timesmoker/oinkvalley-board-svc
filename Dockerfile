@@ -2,12 +2,12 @@
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /workspace
 ARG GITHUB_ACTOR
-ARG GITHUB_TOKEN
-ENV GITHUB_ACTOR=$GITHUB_ACTOR GITHUB_TOKEN=$GITHUB_TOKEN
 COPY gradlew settings.gradle build.gradle content-schema.json ./
 COPY gradle gradle
 COPY src src
-RUN chmod +x gradlew \
+RUN --mount=type=secret,id=github_token \
+    export GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
+    && chmod +x gradlew \
     && ./gradlew bootJar --no-daemon -x test \
     && cp build/libs/board-svc-*-SNAPSHOT.jar /workspace/app.jar
 
