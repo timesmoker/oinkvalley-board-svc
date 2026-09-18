@@ -29,7 +29,7 @@ public record BoardActor(Long userId, Set<String> roles) {
         return userId != null && userId.equals(authorUserId);
     }
 
-    /** SecurityContext 에서 현재 주체 해석. JwtAuthenticationFilter 가 principal=userId(Long) 로 채운다. */
+    /** SecurityContext 에서 현재 주체 해석. JwtPrincipalConverter 가 principal=userId(Long) 로 채운다. */
     public static BoardActor current() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof Long userId)) {

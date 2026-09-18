@@ -1,6 +1,6 @@
 package com.oinkvalley.board_svc.config;
 
-import com.oinkvalley.board_svc.security.JwtAuthenticationFilter;
+import com.oinkvalley.board_svc.security.JwtPrincipalConverter;
 import com.oinkvalley.board_svc.security.SecurityJsonHandlers;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -10,7 +10,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.intercept.AuthorizationFilter;
 
 /**
  * 스프링 시큐리티 필터 체인. 읽기 경로는 여기서 열어두고,
@@ -20,7 +19,7 @@ import org.springframework.security.web.access.intercept.AuthorizationFilter;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtPrincipalConverter jwtPrincipalConverter;
     private final SecurityJsonHandlers securityJsonHandlers;
 
     @Bean
@@ -42,8 +41,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/comments/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                // 인가 판단 전에 Bearer 토큰을 파싱해 SecurityContext 를 채움
-                .addFilterBefore(jwtAuthenticationFilter, AuthorizationFilter.class)
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtPrincipalConverter))
+                        .authenticationEntryPoint((request, response, authException) ->
+                                securityJsonHandlers.writeInvalidToken(response))
+                        .accessDeniedHandler((request, response, accessDeniedException) ->
+                                securityJsonHandlers.writeForbidden(response))
+                )
                 .build();
     }
 }
