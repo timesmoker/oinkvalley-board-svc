@@ -1,6 +1,9 @@
 # Build (JDK)
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /workspace
+ARG GITHUB_ACTOR
+ARG GITHUB_TOKEN
+ENV GITHUB_ACTOR=$GITHUB_ACTOR GITHUB_TOKEN=$GITHUB_TOKEN
 COPY gradlew settings.gradle build.gradle content-schema.json ./
 COPY gradle gradle
 COPY src src
@@ -15,4 +18,5 @@ RUN addgroup -S spring && adduser -S spring -G spring
 COPY --from=build /workspace/app.jar app.jar
 USER spring:spring
 EXPOSE 8080
+EXPOSE 9090
 ENTRYPOINT ["java","-jar","/app/app.jar"]

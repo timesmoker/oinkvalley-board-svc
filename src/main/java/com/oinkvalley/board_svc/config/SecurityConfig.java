@@ -37,7 +37,6 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/health").permitAll()
-                        .requestMatchers("/internal/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/boards/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/posts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/comments/**").permitAll()

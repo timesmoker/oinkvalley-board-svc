@@ -1,11 +1,11 @@
 package com.oinkvalley.board_svc.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +22,7 @@ public class ProseMirrorContentValidator {
     private final BoardContentSchema schema;
 
     public ProseMirrorContentValidator() {
-        this.schema = loadSchema(new ObjectMapper());
+        this.schema = loadSchema(JsonMapper.shared());
     }
 
     public void validate(Map<String, Object> content) {
@@ -103,13 +103,13 @@ public class ProseMirrorContentValidator {
         }
     }
 
-    private static BoardContentSchema loadSchema(ObjectMapper objectMapper) {
+    private static BoardContentSchema loadSchema(JsonMapper jsonMapper) {
         try (InputStream in = ProseMirrorContentValidator.class.getClassLoader().getResourceAsStream(SCHEMA_RESOURCE)) {
             if (in == null) {
                 throw new IllegalStateException(SCHEMA_RESOURCE + " not found on classpath");
             }
-            return objectMapper.readValue(in, BoardContentSchema.class);
-        } catch (IOException e) {
+            return jsonMapper.readValue(in, BoardContentSchema.class);
+        } catch (JacksonException | java.io.IOException e) {
             throw new IllegalStateException("Failed to load " + SCHEMA_RESOURCE, e);
         }
     }
