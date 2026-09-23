@@ -29,7 +29,7 @@ public class BoardQueryService {
     private final BoardPermissionService boardPermissionService;
 
     public Page<PostSummaryResponse> getPostSummaries(Board board, BoardActor actor, Pageable pageable) {
-        Pageable sorted = PageableSortDefaults.createdAtDescIfUnsorted(pageable);
+        Pageable sorted = PageableSortDefaults.normalize(pageable);
         Page<PostBaseProjection> basePage = postRepository.findPostBaseList(board.getId(), sorted);
 
         List<Long> postIds = basePage.getContent().stream()

@@ -2,17 +2,17 @@ package com.oinkvalley.board_svc.controller;
 
 import com.oinkvalley.board_svc.dto.board.CommentCreateRequest;
 import com.oinkvalley.board_svc.dto.board.CommentResponse;
+import com.oinkvalley.board_svc.dto.board.CommentThreadPageResponse;
 import com.oinkvalley.board_svc.dto.board.CommentUpdateRequest;
 import com.oinkvalley.board_svc.service.CommentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-/** 댓글 CRUD. 목록·단건 조회는 {@code postId} 쿼리 또는 경로로 게시글과 연결됩니다. */
+/** 댓글 CRUD. 목록은 스레드 페이지 — 루트 20개 + 답글 전부. `sort=createdAt,asc|desc`. */
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/comments")
@@ -35,7 +35,7 @@ public class CommentController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<CommentResponse>> getByPost(
+    public ResponseEntity<CommentThreadPageResponse> getByPost(
             @RequestParam("postId") Long postId,
             Pageable pageable
     ) {
