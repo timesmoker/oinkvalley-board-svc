@@ -115,7 +115,11 @@ Spring Boot **게시판 REST API**다. 게시판(Board)·게시글(Post)·댓글
 | DELETE | `/comments/{commentId}`      | 필요  | 작성자만 **204** / **403** / **404** |
 
 
-페이지네이션: Spring `Pageable` — 쿼리 `page`, `size`, 선택 `sort`.
+페이지네이션: Spring `Pageable` — 쿼리 `page`, 선택 `sort`.
+댓글 목록은 **스레드 단위**: 루트 최대 20개/페이지(고정) + 해당 루트 답글 전부.
+응답 `CommentThreadPageResponse`: `totalRoots`/`totalPages`(페이징), `totalComments`(답글 포함 표시용).
+정렬 허용: `createdAt,desc`(기본) / `createdAt,asc`.
+게시글 목록 size는 1~50(기본 10).
 
 JSON 은 **camelCase** 다.
 

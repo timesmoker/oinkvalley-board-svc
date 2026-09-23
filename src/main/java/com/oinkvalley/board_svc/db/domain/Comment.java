@@ -10,6 +10,7 @@ import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 @Entity
@@ -36,6 +37,14 @@ public class Comment {
     @JoinColumn(name = "post_id", nullable = false)
     private Post post;
 
+    /** 실제 답글 대상. null = 최상위 댓글. */
+    @Column(name = "parent_comment_id")
+    private Long parentCommentId;
+
+    /** 소속 최상위 스레드. 최상위는 자기 id. */
+    @Column(name = "root_comment_id")
+    private Long rootCommentId;
+
     @NotNull
     @Column(name = "content", nullable = false)
     @JdbcTypeCode(SqlTypes.JSON)
@@ -46,6 +55,9 @@ public class Comment {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     @PrePersist
     public void prePersist() {
@@ -60,5 +72,22 @@ public class Comment {
 
     public void update(Map<String, Object> content) {
         this.content = content;
+    }
+
+    public void assignRoot(Long rootCommentId) {
+        this.rootCommentId = rootCommentId;
+    }
+
+    public void softDelete() {
+        this.deletedAt = Instant.now();
+        this.content = Map.of("type", "doc", "content", List.of());
+    }
+
+    public boolean isDeleted() {
+        return this.deletedAt != null;
+    }
+
+    public boolean isRoot() {
+        return this.parentCommentId == null;
     }
 }
