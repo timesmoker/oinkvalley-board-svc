@@ -9,9 +9,12 @@ import com.oinkvalley.board_svc.dto.internal.InternalPostCreateRequest;
 import com.oinkvalley.board_svc.dto.internal.InternalPostCreateResponse;
 import com.oinkvalley.board_svc.db.repository.BoardRepository;
 import com.oinkvalley.board_svc.db.repository.PostRepository;
+import com.oinkvalley.board_svc.messaging.event.PostCreatedEvent;
+import com.oinkvalley.board_svc.messaging.publisher.PostEventPublisher;
 import com.oinkvalley.board_svc.security.BoardActor;
 import jakarta.transaction.Transactional;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,6 +31,7 @@ public class PostService {
     private final BoardRepository boardRepository;
     private final ProseMirrorContentValidator contentValidator;
     private final BoardPermissionService boardPermissionService;
+    private final PostEventPublisher postEventPublisher;
 
     public PostResponse create(Long userId, PostCreateRequest request) {
         contentValidator.validate(request.content());
@@ -40,7 +44,9 @@ public class PostService {
                 .title(request.title())
                 .content(request.content())
                 .build();
-        return toResponse(postRepository.save(post));
+        post = postRepository.save(post);
+        postEventPublisher.publish(new PostCreatedEvent(post));
+        return toResponse(post);
     }
 
     /** {@code POST /internal/posts} — 작성자 ID 는 요청 본문의 {@code authorUserId}. */

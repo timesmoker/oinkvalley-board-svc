@@ -44,11 +44,13 @@ Spring Boot **게시판 REST API**다. 게시판(Board)·게시글(Post)·댓글
 | ---------------- | ---------------------------------------------------------------------------- |
 | `controller/`    | `BoardController`, `PostController`, `CommentController`, `HealthController` |
 | `service/`       | 도메인 로직                                                                       |
+| `event/`         | 도메인 이벤트 (`CommentCreatedEvent`, `PostCreatedEvent`)                        |
+| `messaging/`     | `publisher` / `consumer` / `model` (NATS wire)                              |
 | `dto/`           | 요청·응답 레코드                                                                    |
 | `db/domain/`     | JPA 엔티티 `Board`, `Post`, `Comment`                                           |
 | `db/repository/` | `BoardRepository`, `PostRepository`, `CommentRepository`                     |
 | `security/`      | JWT 검증, `RestrictedBoardReadRequestMatcher`                                  |
-| `config/`        | `SecurityConfig` 등                                                           |
+| `config/`        | `SecurityConfig`, `NatsConfig` 등                                             |
 
 
 ## HTTP API
@@ -108,7 +110,7 @@ Spring Boot **게시판 REST API**다. 게시판(Board)·게시글(Post)·댓글
 | POST   | `/posts`                     | 필요  | `PostResponse`                   |
 | PUT    | `/posts/{postId}`            | 필요  | 작성자만 **200** / **403** / **404** |
 | DELETE | `/posts/{postId}`            | 필요  | 작성자만 **204** / **403** / **404** |
-| GET    | `/comments?postId=`          | 매처  | `Page<CommentResponse>`          |
+| GET    | `/comments?postId=`          | 매처  | `CommentThreadPageResponse`      |
 | GET    | `/comments/{commentId}`      | 매처  | `CommentResponse`                |
 | POST   | `/comments?postId=`          | 필요  | `CommentResponse`                |
 | PUT    | `/comments/{commentId}`      | 필요  | 작성자만 **200** / **403** / **404** |
@@ -121,6 +123,13 @@ Spring Boot **게시판 REST API**다. 게시판(Board)·게시글(Post)·댓글
 정렬 허용: `createdAt,desc`(기본) / `createdAt,asc`.
 게시글 목록 size는 1~50(기본 10).
 
+**이벤트 (NATS):**
+- 댓글(루트·답글): `CommentCreatedEvent` → type `comment.created`
+  (게시글 작성자 + 부모 댓글 작성자)
+- 게시글: `PostCreatedEvent` → type `post.created` (수신자는 호출측; 팔로워 목록 전엔 빈 리스트)
+`NatsConfig`는 `config`. notification.create 페이로드 스키마는 notification-svc 소유.
+`NATS_URL` 비면 publish 스킵. 수신: notification-svc JetStream consumer.
+
 JSON 은 **camelCase** 다.
 
 ### 응답·요청 필드 요약
@@ -129,14 +138,15 @@ JSON 은 **camelCase** 다.
 - **BoardPostsBundleResponse:** `board`, `posts`
 - **PostSummaryResponse:** `id`, `title`, `userId`, `createdAt`, `commentCount`
 - **PostResponse:** `id`, `userId`, `boardId`, `title`, `content`(JSON 객체), `createdAt`, `updatedAt`
-- **CommentResponse:** `id`, `userId`, `postId`, `content`(JSON 객체), `createdAt`, `updatedAt`
+- **CommentResponse:** `id`, `userId`, `postId`, `parentCommentId`, `parentUserId`, `rootCommentId`, `content`, `deleted`, `createdAt`, `updatedAt`
 
 **요청 본문**
 
 - Board 생성·수정: `name`, `slug`, `summary`, `isPrivate`, `isActive`
 - Post 생성: `boardId`, `title`, `content` — 작성자 ID 는 인증에서 결정
 - Post 수정: `title`, `content`
-- Comment 생성·수정: `content`
+- Comment 생성: `content`, 선택 `parentCommentId` — 작성자 ID 는 인증에서 결정
+- Comment 수정: `content`
 
 ### 삭제 동작
 

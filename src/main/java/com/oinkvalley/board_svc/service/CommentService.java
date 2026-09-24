@@ -9,6 +9,8 @@ import com.oinkvalley.board_svc.dto.board.CommentResponse;
 import com.oinkvalley.board_svc.dto.board.CommentThreadPageResponse;
 import com.oinkvalley.board_svc.dto.board.CommentUpdateRequest;
 import com.oinkvalley.board_svc.dto.board.projection.PostCommentCountProjection;
+import com.oinkvalley.board_svc.messaging.event.CommentCreatedEvent;
+import com.oinkvalley.board_svc.messaging.publisher.CommentEventPublisher;
 import com.oinkvalley.board_svc.security.BoardActor;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,7 @@ public class CommentService {
     private final PostRepository postRepository;
     private final ProseMirrorContentValidator contentValidator;
     private final BoardPermissionService boardPermissionService;
+    private final CommentEventPublisher commentEventPublisher;
 
     public CommentResponse create(Long postId, Long userId, CommentCreateRequest request) {
         contentValidator.validate(request.content());
@@ -79,6 +82,17 @@ public class CommentService {
             comment.assignRoot(comment.getId());
             comment = commentRepository.save(comment);
         }
+
+        // 루트 댓글이면 root=null. reply면 parent 가 루트이거나 rootCommentId 로 로드.
+        Comment root = null;
+        if (parent != null) {
+            if (parent.isRoot()) {
+                root = parent;
+            } else if (rootCommentId != null) {
+                root = commentRepository.findById(rootCommentId).orElse(null);
+            }
+        }
+        commentEventPublisher.publish(new CommentCreatedEvent(comment, parent, root, post));
 
         return toResponse(comment, parentUserIdOf(parent));
     }
