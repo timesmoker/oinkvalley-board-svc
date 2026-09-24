@@ -39,6 +39,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-grpc-server'
 	implementation 'com.google.protobuf:protobuf-java-util'
 	implementation 'com.oinkvalley.protos:board-v1:1.0.0'
+	implementation 'io.nats:jnats:2.20.5'
 	runtimeOnly 'org.postgresql:postgresql'
 
 	compileOnly 'org.projectlombok:lombok'
