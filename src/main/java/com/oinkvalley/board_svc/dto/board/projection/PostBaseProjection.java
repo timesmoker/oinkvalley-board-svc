@@ -14,4 +14,6 @@ public interface PostBaseProjection {
     Long getUserId();
 
     Instant getCreatedAt();
+
+    boolean getAiGenerated();
 }

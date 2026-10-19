@@ -10,6 +10,7 @@ public record PostSummaryResponse(
         String title,
         Long userId,
         Instant createdAt,
-        long commentCount
+        long commentCount,
+        boolean aiGenerated
 ) {
 }

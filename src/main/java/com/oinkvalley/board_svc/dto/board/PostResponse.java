@@ -13,6 +13,7 @@ public record PostResponse(
         String title,
         Map<String, Object> content,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        boolean aiGenerated
 ) {
 }

@@ -95,6 +95,7 @@ public class BoardInternalGrpcService extends BoardInternalServiceGrpc.BoardInte
 				.setCreatedAtMs(toMillis(item.post().getCreatedAt()))
 				.setUpdatedAtMs(toMillis(item.post().getUpdatedAt()))
 				.setCommentCount(item.commentCount())
+				.setAiGenerated(item.post().getAiGenerated())
 				.build();
 	}
 

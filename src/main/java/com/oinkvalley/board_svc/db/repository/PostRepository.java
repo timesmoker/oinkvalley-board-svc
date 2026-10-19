@@ -21,7 +21,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Optional<Post> findByIdAndBoard_Id(Long id, Long boardId);
 
     @Query("""
-            SELECT p.id AS id, p.title AS title, p.userId AS userId, p.createdAt AS createdAt
+            SELECT p.id AS id, p.title AS title, p.userId AS userId, p.createdAt AS createdAt, p.aiGenerated AS aiGenerated
             FROM Post p
             WHERE p.board.id = :boardId
             """)
@@ -38,7 +38,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query("""
             SELECT p.id AS id, p.board.id AS boardId, p.userId AS userId, p.title AS title,
-                   p.createdAt AS createdAt, p.updatedAt AS updatedAt
+                   p.createdAt AS createdAt, p.updatedAt AS updatedAt, p.aiGenerated AS aiGenerated
             FROM Post p
             WHERE p.id IN :ids
             """)
@@ -46,7 +46,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query("""
             SELECT p.id AS id, p.board.id AS boardId, p.userId AS userId, p.title AS title,
-                   p.createdAt AS createdAt, p.updatedAt AS updatedAt
+                   p.createdAt AS createdAt, p.updatedAt AS updatedAt, p.aiGenerated AS aiGenerated
             FROM Post p
             WHERE p.id > :afterId
             ORDER BY p.id ASC

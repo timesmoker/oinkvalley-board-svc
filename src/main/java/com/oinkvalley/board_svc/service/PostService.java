@@ -65,6 +65,7 @@ public class PostService {
                 .board(board)
                 .title(request.title())
                 .content(content)
+                .aiGenerated(true) // 내부 gRPC 경로 = AI(버블팰) 작성
                 .build();
         post = postRepository.save(post);
         postEventPublisher.publish(new PostCreatedEvent(post));
@@ -129,7 +130,8 @@ public class PostService {
                 post.getTitle(),
                 post.getContent(),
                 post.getCreatedAt(),
-                post.getUpdatedAt()
+                post.getUpdatedAt(),
+                post.isAiGenerated()
         );
     }
 }
