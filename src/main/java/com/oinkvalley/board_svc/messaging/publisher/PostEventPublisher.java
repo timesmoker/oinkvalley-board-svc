@@ -1,27 +1,27 @@
 package com.oinkvalley.board_svc.messaging.publisher;
 
-import com.oinkvalley.board_svc.config.NatsConfig;
 import com.oinkvalley.board_svc.db.domain.Post;
 import com.oinkvalley.board_svc.messaging.event.PostCreatedEvent;
+import com.oinkvalley.board_svc.messaging.outbox.OutboxWriter;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 게시글 생성 도메인 사실 → {@code board.post.created}.
- * 팔로워 알림 등은 notification-svc 정책.
+ * 게시글 도메인 사실 → outbox 기록 (발행은 OutboxRelay). 글 작성·수정·삭제 트랜잭션 안에서 호출.
+ * 수정·삭제 payload 는 postId·boardId 만 — 수신자(search-svc)는 현재 상태를 다시 읽는다.
  */
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class PostEventPublisher {
 
     public static final String SUBJECT = "board.post.created";
+    public static final String SUBJECT_UPDATED = "board.post.updated";
+    public static final String SUBJECT_DELETED = "board.post.deleted";
 
-    private final NatsConfig natsConfig;
+    private final OutboxWriter outboxWriter;
 
     public void publish(PostCreatedEvent event) {
         if (event == null || event.post() == null) {
@@ -36,10 +36,21 @@ public class PostEventPublisher {
         body.put("authorUserId", post.getUserId());
         body.put("title", post.getTitle() == null ? "" : post.getTitle());
 
-        try {
-            natsConfig.publish(SUBJECT, body);
-        } catch (Exception e) {
-            log.warn("board.post.created publish failed postId={}: {}", post.getId(), e.toString());
-        }
+        outboxWriter.record(SUBJECT, body);
+    }
+
+    public void publishUpdated(Post post) {
+        outboxWriter.record(SUBJECT_UPDATED, idBody(post));
+    }
+
+    public void publishDeleted(Post post) {
+        outboxWriter.record(SUBJECT_DELETED, idBody(post));
+    }
+
+    private static Map<String, Object> idBody(Post post) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("postId", post.getId());
+        body.put("boardId", post.getBoard() != null ? post.getBoard().getId() : null);
+        return body;
     }
 }

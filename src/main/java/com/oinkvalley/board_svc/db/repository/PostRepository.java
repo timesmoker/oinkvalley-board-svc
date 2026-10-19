@@ -3,6 +3,7 @@ package com.oinkvalley.board_svc.db.repository;
 import com.oinkvalley.board_svc.db.domain.Post;
 import com.oinkvalley.board_svc.dto.board.projection.PostBaseProjection;
 import com.oinkvalley.board_svc.dto.board.projection.PostCommentCountProjection;
+import com.oinkvalley.board_svc.dto.board.projection.PostIndexProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -34,6 +35,23 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             GROUP BY p.id
             """)
     List<PostCommentCountProjection> countCommentsByPostIds(@Param("postIds") List<Long> postIds);
+
+    @Query("""
+            SELECT p.id AS id, p.board.id AS boardId, p.userId AS userId, p.title AS title,
+                   p.createdAt AS createdAt, p.updatedAt AS updatedAt
+            FROM Post p
+            WHERE p.id IN :ids
+            """)
+    List<PostIndexProjection> findIndexByIds(@Param("ids") List<Long> ids);
+
+    @Query("""
+            SELECT p.id AS id, p.board.id AS boardId, p.userId AS userId, p.title AS title,
+                   p.createdAt AS createdAt, p.updatedAt AS updatedAt
+            FROM Post p
+            WHERE p.id > :afterId
+            ORDER BY p.id ASC
+            """)
+    List<PostIndexProjection> findIndexAfter(@Param("afterId") Long afterId, Pageable pageable);
 
     @Query("SELECT p.board.id FROM Post p WHERE p.id = :id")
     Optional<Long> findBoardIdByPostId(@Param("id") Long id);

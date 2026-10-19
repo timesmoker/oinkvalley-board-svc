@@ -66,7 +66,9 @@ public class PostService {
                 .title(request.title())
                 .content(content)
                 .build();
-        return new InternalPostCreateResponse(postRepository.save(post).getId());
+        post = postRepository.save(post);
+        postEventPublisher.publish(new PostCreatedEvent(post));
+        return new InternalPostCreateResponse(post.getId());
     }
 
     private static Map<String, Object> bubblePalMetadata(InternalPostCreateRequest request) {
@@ -92,6 +94,7 @@ public class PostService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission to update post: " + postId);
         }
         post.update(request.title(), request.content());
+        postEventPublisher.publishUpdated(post);
         return toResponse(post);
     }
 
@@ -102,6 +105,7 @@ public class PostService {
         if (!post.getUserId().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission to delete post: " + postId);
         }
+        postEventPublisher.publishDeleted(post);
         postRepository.delete(post);
     }
 

@@ -6,11 +6,19 @@ import com.google.protobuf.util.JsonFormat;
 import com.oinkvalley.board.v1.BoardInternalServiceGrpc;
 import com.oinkvalley.board.v1.CreatePostRequest;
 import com.oinkvalley.board.v1.CreatePostResponse;
+import com.oinkvalley.board.v1.GetIndexPostsRequest;
+import com.oinkvalley.board.v1.GetIndexPostsResponse;
+import com.oinkvalley.board.v1.IndexPost;
+import com.oinkvalley.board.v1.ListIndexPostsRequest;
+import com.oinkvalley.board.v1.ListIndexPostsResponse;
 import com.oinkvalley.board_svc.dto.internal.InternalPostCreateRequest;
 import com.oinkvalley.board_svc.dto.internal.InternalPostCreateResponse;
+import com.oinkvalley.board_svc.service.PostIndexService;
 import com.oinkvalley.board_svc.service.PostService;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.grpc.server.service.GrpcService;
@@ -19,7 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 기존 {@code POST /internal/posts} 대체. Service 레이어는 그대로 호출. */
+/** 내부 gRPC — 글 생성(기존 {@code POST /internal/posts} 대체), 검색 색인용 글 조회. Service 레이어는 그대로 호출. */
 @GrpcService
 @RequiredArgsConstructor
 public class BoardInternalGrpcService extends BoardInternalServiceGrpc.BoardInternalServiceImplBase {
@@ -28,6 +36,7 @@ public class BoardInternalGrpcService extends BoardInternalServiceGrpc.BoardInte
 	private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
 	private final PostService postService;
+	private final PostIndexService postIndexService;
 
 	@Override
 	public void createPost(CreatePostRequest request, StreamObserver<CreatePostResponse> responseObserver) {
@@ -41,6 +50,56 @@ public class BoardInternalGrpcService extends BoardInternalServiceGrpc.BoardInte
 			responseObserver.onError(
 					Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
 		}
+	}
+
+	@Override
+	public void getIndexPosts(GetIndexPostsRequest request, StreamObserver<GetIndexPostsResponse> responseObserver) {
+		try {
+			List<PostIndexService.IndexPost> posts = postIndexService.get(request.getPostIdsList());
+			responseObserver.onNext(GetIndexPostsResponse.newBuilder()
+					.addAllPosts(posts.stream().map(BoardInternalGrpcService::toProto).toList())
+					.build());
+			responseObserver.onCompleted();
+		} catch (ResponseStatusException e) {
+			responseObserver.onError(toGrpcStatus(e).withDescription(e.getReason()).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(
+					Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
+	}
+
+	@Override
+	public void listIndexPosts(ListIndexPostsRequest request, StreamObserver<ListIndexPostsResponse> responseObserver) {
+		try {
+			PostIndexService.IndexPage page = postIndexService.list(request.getAfterId(), request.getLimit());
+			responseObserver.onNext(ListIndexPostsResponse.newBuilder()
+					.addAllPosts(page.posts().stream().map(BoardInternalGrpcService::toProto).toList())
+					.setNextAfterId(page.nextAfterId())
+					.setHasMore(page.hasMore())
+					.build());
+			responseObserver.onCompleted();
+		} catch (ResponseStatusException e) {
+			responseObserver.onError(toGrpcStatus(e).withDescription(e.getReason()).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(
+					Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
+	}
+
+	private static IndexPost toProto(PostIndexService.IndexPost item) {
+		return IndexPost.newBuilder()
+				.setId(item.post().getId())
+				.setBoardId(item.post().getBoardId())
+				.setUserId(item.post().getUserId())
+				.setTitle(item.post().getTitle())
+				.setCreatedAtMs(toMillis(item.post().getCreatedAt()))
+				.setUpdatedAtMs(toMillis(item.post().getUpdatedAt()))
+				.setCommentCount(item.commentCount())
+				.build();
+	}
+
+	private static long toMillis(Instant instant) {
+		return instant == null ? 0L : instant.toEpochMilli();
 	}
 
 	private static InternalPostCreateRequest toDto(CreatePostRequest request)

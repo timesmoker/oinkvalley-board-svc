@@ -1,6 +1,7 @@
 package com.oinkvalley.board_svc.service;
 
 import com.oinkvalley.board_svc.db.domain.Board;
+import com.oinkvalley.board_svc.messaging.listable.ListableBoardSetPublisher;
 import com.oinkvalley.board_svc.db.domain.BoardPostReadPolicy;
 import com.oinkvalley.board_svc.db.domain.BoardRolePermission;
 import com.oinkvalley.board_svc.dto.board.BoardCreateRequest;
@@ -31,6 +32,7 @@ public class BoardService {
     private final BoardRolePermissionRepository permissionRepository;
     private final BoardQueryService boardQueryService;
     private final BoardPermissionService boardPermissionService;
+    private final ListableBoardSetPublisher listableBoardSetPublisher;
 
     public BoardResponse create(BoardCreateRequest request) {
         Board board = Board.builder()
@@ -42,6 +44,7 @@ public class BoardService {
                 .build();
         Board saved = boardRepository.save(board);
         seedDefaultPermissions(saved.getId());
+        listableBoardSetPublisher.refreshAfterCommit();
         return toResponse(saved);
     }
 
@@ -74,6 +77,7 @@ public class BoardService {
                 parsePolicy(request.postReadPolicy()),
                 request.isActive()
         );
+        listableBoardSetPublisher.refreshAfterCommit();
         return toResponse(board);
     }
 
