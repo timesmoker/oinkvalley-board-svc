@@ -16,4 +16,6 @@ public interface PostIndexProjection {
     Instant getCreatedAt();
 
     Instant getUpdatedAt();
+
+    boolean getAiGenerated();
 }

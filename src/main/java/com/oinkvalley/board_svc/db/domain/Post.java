@@ -47,6 +47,11 @@ public class Post {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    /** AI 가 쓴 글 — 작성 경로로 정한다 (내부 gRPC CreatePost = AI). 생성 후 바뀌지 않음. */
+    @Column(name = "ai_generated", nullable = false, updatable = false)
+    @Builder.Default
+    private boolean aiGenerated = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @NotNull
     @JoinColumn(name = "board_id", nullable = false)

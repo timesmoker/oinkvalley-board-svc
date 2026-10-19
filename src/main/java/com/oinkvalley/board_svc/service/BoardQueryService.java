@@ -57,7 +57,8 @@ public class BoardQueryService {
                         maskOthers && !actor.isAuthorOf(base.getUserId()) ? maskedTitle : base.getTitle(),
                         base.getUserId(),
                         base.getCreatedAt(),
-                        commentCountMap.getOrDefault(base.getId(), 0L)
+                        commentCountMap.getOrDefault(base.getId(), 0L),
+                        base.getAiGenerated()
                 ))
                 .toList();
 
