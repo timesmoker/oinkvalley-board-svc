@@ -3,9 +3,14 @@ package com.oinkvalley.board_svc.config;
 import io.nats.client.Connection;
 import io.nats.client.ConnectionListener;
 import io.nats.client.JetStream;
+import io.nats.client.JetStreamApiException;
+import io.nats.client.KeyValue;
+import io.nats.client.KeyValueManagement;
 import io.nats.client.Nats;
 import io.nats.client.Options;
 import io.nats.client.PublishOptions;
+import io.nats.client.api.KeyValueConfiguration;
+import io.nats.client.api.StorageType;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +19,9 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * NATS 연결·발행. Subject는 발행자가 넘김 (도메인 이벤트 주소).
@@ -29,6 +36,8 @@ public class NatsConfig {
 
     /** publishAcked 가 스트림 ack 를 기다리는 시간 */
     private final Duration publishTimeout;
+    /** (재)연결될 때마다 실행 — 끊긴 동안 밀린 일을 바로 따라잡게 */
+    private final List<Runnable> onConnected = new CopyOnWriteArrayList<>();
     /** 첫 연결 전엔 null, 끊긴 동안엔 상태가 CONNECTED 가 아니다 — 쓰기 전에 {@link #isConnected()}. */
     private volatile Connection connection;
 
@@ -48,6 +57,7 @@ public class NatsConfig {
                     if (event == ConnectionListener.Events.CONNECTED || event == ConnectionListener.Events.RECONNECTED) {
                         connection = conn;
                         log.info("NATS {} url={}", event, natsUrl);
+                        onConnected.forEach(task -> Thread.ofVirtual().start(task));
                     } else if (event == ConnectionListener.Events.DISCONNECTED) {
                         log.warn("NATS disconnected — reconnecting url={}", natsUrl);
                     }
@@ -58,6 +68,14 @@ public class NatsConfig {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("NATS connect interrupted", e);
+        }
+    }
+
+    /** (재)연결 시 실행할 작업 등록. 이미 연결돼 있으면 바로 한 번 실행한다. */
+    public void onConnected(Runnable task) {
+        onConnected.add(task);
+        if (isConnected()) {
+            Thread.ofVirtual().start(task);
         }
     }
 
@@ -81,6 +99,25 @@ public class NatsConfig {
                 .streamTimeout(publishTimeout)
                 .build();
         js.publish(subject, JSON.writeValueAsBytes(body), options);
+    }
+
+    /** JetStream KV 버킷 (없으면 생성, 키당 최신 값 1개만 유지). */
+    public KeyValue keyValueBucket(String bucket) throws Exception {
+        Connection connection = this.connection;
+        if (!isConnected()) {
+            throw new IllegalStateException("NATS not connected");
+        }
+        KeyValueManagement kvm = connection.keyValueManagement();
+        try {
+            kvm.getStatus(bucket);
+        } catch (JetStreamApiException notFound) {
+            kvm.create(KeyValueConfiguration.builder()
+                    .name(bucket)
+                    .storageType(StorageType.File)
+                    .maxHistoryPerKey(1)
+                    .build());
+        }
+        return connection.keyValue(bucket);
     }
 
     @PreDestroy
