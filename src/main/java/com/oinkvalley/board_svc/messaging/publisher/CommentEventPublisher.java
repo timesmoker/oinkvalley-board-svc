@@ -1,11 +1,10 @@
 package com.oinkvalley.board_svc.messaging.publisher;
 
-import com.oinkvalley.board_svc.config.NatsConfig;
 import com.oinkvalley.board_svc.db.domain.Comment;
 import com.oinkvalley.board_svc.db.domain.Post;
 import com.oinkvalley.board_svc.messaging.event.CommentCreatedEvent;
+import com.oinkvalley.board_svc.messaging.outbox.OutboxWriter;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
@@ -13,16 +12,15 @@ import java.util.Map;
 
 /**
  * 댓글 생성 도메인 사실 → {@code board.comment.created}.
- * 수신자·문구·dedupe 는 notification-svc 가 결정.
+ * 수신자·문구·dedupe 는 notification-svc 가 결정. outbox 기록 (발행은 OutboxRelay).
  */
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CommentEventPublisher {
 
     public static final String SUBJECT = "board.comment.created";
 
-    private final NatsConfig natsConfig;
+    private final OutboxWriter outboxWriter;
 
     public void publish(CommentCreatedEvent event) {
         if (event == null || event.comment() == null || event.post() == null) {
@@ -45,10 +43,6 @@ public class CommentEventPublisher {
         body.put("rootCommentId", root != null ? root.getId() : null);
         body.put("rootAuthorUserId", root != null ? root.getUserId() : null);
 
-        try {
-            natsConfig.publish(SUBJECT, body);
-        } catch (Exception e) {
-            log.warn("board.comment.created publish failed commentId={}: {}", comment.getId(), e.toString());
-        }
+        outboxWriter.record(SUBJECT, body);
     }
 }
